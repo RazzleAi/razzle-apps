@@ -1,0 +1,64 @@
+{
+  "name": "razzle-account-manager",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/razzle-account-manager/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nx/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production",
+      "options": {
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/packages/razzle-account-manager",
+        "main": "packages/razzle-account-manager/src/main.ts",
+        "tsConfig": "packages/razzle-account-manager/tsconfig.app.json",
+        "assets": ["packages/razzle-account-manager/src/assets"],
+        "isolatedConfig": true,
+        "webpackConfig": "packages/razzle-account-manager/webpack.config.js"
+      },
+      "configurations": {
+        "development": {},
+        "production": {}
+      }
+    },
+    "serve": {
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "razzle-account-manager:build"
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "razzle-account-manager:build:development"
+        },
+        "production": {
+          "buildTarget": "razzle-account-manager:build:production"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nx/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/razzle-account-manager/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "packages/razzle-account-manager/jest.config.ts",
+        "passWithNoTests": true
+      },
+      "configurations": {
+        "ci": {
+          "ci": true,
+          "codeCoverage": true
+        }
+      }
+    }
+  },
+  "tags": []
+}
