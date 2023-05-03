@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { Razzle } from '@razzledotai/sdk';
 import { SerpApiService } from './serp-api.service';
+import { SerpAPI } from './serp-api';
 
 
 @Module({
