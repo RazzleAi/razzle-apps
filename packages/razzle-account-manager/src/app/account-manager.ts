@@ -31,7 +31,7 @@ export class AccountManager {
     const accountId = callDetails.accountId
     const userId = callDetails.userId
 
-    const accountUser = await this.accountService.getUserAccount(
+    const accountUser = await this.accountService.getAccountById(
       accountId,
       userId
     )
@@ -47,7 +47,8 @@ export class AccountManager {
       })
     }
 
-    if (!accountUser.isOwner) {
+    const isOwner = accountUser.owner.id = accountUser.id
+    if (!isOwner) {
       console.error(
         `Account User ${accountUser} is not the owner of the account`
       )
@@ -72,9 +73,7 @@ export class AccountManager {
     const accountId = callDetails.accountId
     const userId = callDetails.userId
     const account = await this.accountService.getAccountById(accountId, userId)
-    console.debug(`Account: ${JSON.stringify(account)}`)
     const accountOwner = account.owner
-    console.debug(`Account Owner: ${JSON.stringify(accountOwner)}`)
 
     const usersInAccount = await this.accountService.getUsersInAccount(
       accountId
