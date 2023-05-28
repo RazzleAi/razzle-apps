@@ -6,7 +6,8 @@ export interface SearchResult {
     title: string;
     link: string;
     snippet: string;
-    description: string;
+    description?: string;
+    source?: string;
 
 }
 
