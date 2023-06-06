@@ -34,6 +34,7 @@ export class AccountService {
     )
   }
 
+  // Get all users in an account
   getUsersInAccount(accountId: string): Promise<User[]> {
     return API.get<User[]>(`/account/internal/${accountId}/all-users`)
   }
