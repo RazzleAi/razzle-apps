@@ -16,11 +16,22 @@
         "tsConfig": "packages/razzle-account-manager/tsconfig.app.json",
         "assets": ["packages/razzle-account-manager/src/assets"],
         "isolatedConfig": true,
-        "webpackConfig": "packages/razzle-account-manager/webpack.config.js"
+        "webpackConfig": "packages/razzle-account-manager/webpack.config.js",
+        "sourceMap": true
       },
       "configurations": {
-        "development": {},
-        "production": {}
+        "production": {
+          "optimization": true,
+          "extractLicenses": true,
+          "inspect": false,
+          "generatePackageJson": true
+        },
+        "staging": {
+          "optimization": true,
+          "extractLicenses": true,
+          "inspect": false,
+          "generatePackageJson": true
+        }
       }
     },
     "serve": {
@@ -58,6 +69,13 @@
           "codeCoverage": true
         }
       }
+    },
+    "build-image": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "docker build -t razzleai/account-manager -f packages/razzle-account-manager/dockerfile ."
+      },
+      "dependsOn": ["^build:production"]
     }
   },
   "tags": []
