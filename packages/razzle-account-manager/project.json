@@ -73,7 +73,7 @@
     "build-image": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "docker build -t razzleai/account-manager -f packages/razzle-account-manager/dockerfile ."
+        "command": "docker build -t razzleai/account-manager -f packages/razzle-account-manager/dockerfile --no-cache ."
       },
       "dependsOn": ["^build:production"]
     }
