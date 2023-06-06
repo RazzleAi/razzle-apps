@@ -15,7 +15,7 @@ RUN npx nx run razzle-account-manager:build --configuration=production --verbose
 FROM node:20-alpine AS run_stage
 
 WORKDIR /app
-COPY --from=build_stage /build/dist/packages/razzle-account-manager/* /app
+COPY --from=build_stage /build/dist/packages/razzle-account-manager/* /app/
 COPY --from=build_stage /build/node_modules /app/node_modules
 
 RUN pwd
