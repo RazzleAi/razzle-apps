@@ -6,11 +6,11 @@ WORKDIR /build
 
 # Copy in the project files
 COPY . .
+
 # Install the dependencies
 RUN npm install --legacy-peer-deps --force
-# RUN npm install @razzledotai/sdk --legacy-peer-deps
-# RUN npm install tslib --legacy-peer-deps
 RUN npx nx run razzle-account-manager:build --configuration=production --verbose
+
 # Copy the build files to the production image
 FROM node:20-alpine AS run_stage
 
