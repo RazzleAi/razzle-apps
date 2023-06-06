@@ -1,22 +1,26 @@
-FROM node:16.18.1 as build_stage
+FROM node:20-alpine as build_stage
 
 
 # Set the working directory
 WORKDIR /build
 
 # Copy in the project files
-COPY dist/packages/razzle-account-manager/* ./
+COPY . .
 # Install the dependencies
-RUN npm install --legacy-peer-deps
-RUN npm install @razzledotai/sdk --legacy-peer-deps
-RUN npm install tslib --legacy-peer-deps
+RUN npm install --legacy-peer-deps --force
+# RUN npm install @razzledotai/sdk --legacy-peer-deps
+# RUN npm install tslib --legacy-peer-deps
+RUN npx nx run razzle-account-manager:build --configuration=production 
 
 # Copy the build files to the production image
-FROM node:16.17.1-alpine AS run_stage
+FROM node:20-alpine AS run_stage
 
 WORKDIR /app
-COPY --from=build_stage /build/* ./
+COPY --from=build_stage /build/dist/packages/razzle-account-manager/* ./
+COPY --from=build_stage /build/node_modules/* ./node_modules
 
+RUN chown -R node:node ./
+USER node
 
 ENV RAZZLE_APP_ID=
 ENV RAZZLE_API_KEY=
@@ -26,6 +30,8 @@ ENV PORT=3011
 
 # Expose the port
 EXPOSE 3011
+
+# RUN npm install --legacy-peer-deps
 
 # Start the server
 CMD node ./main.js
