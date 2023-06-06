@@ -37,7 +37,7 @@ jobs:
 
       - name: Install packages
         id: install-packages
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build the backend
         id: build
