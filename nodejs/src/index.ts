@@ -4,6 +4,7 @@ import { SerpApiService } from './serp-api/serp-api.service'
 import { SerpAPI } from './serp-api/serp-api'
 import { WidgetTester } from './widget-tester/widget-tester'
 import 'dotenv/config'
+import express, { Request, Response } from 'express'
 
 function startAccountManager() {
   return new Promise((resolve, reject) => {
@@ -33,14 +34,27 @@ function startWidgetTester() {
     Razzle.app({
       appId: process.env.WIDGET_TESTER_RAZZLE_AGENT_ID,
       apiKey: process.env.WIDGET_TESTER_RAZZLE_API_KEY,
-      modules: [{ module: WidgetTester, deps: []}],
+      modules: [{ module: WidgetTester, deps: [] }],
     })
     console.debug('Widget Tester started')
   })
 }
 
+function startServer() {
+  const app = express()
+  app.get('/', (req: Request, res: Response) => {
+    res.send('OK')
+  })
+
+  const port = process.env.PORT || 3000
+  app.listen(port, () => {
+    console.log(`Server running on port ${port}`)
+  })
+}
+
 startAccountManager()
 startSerpApi()
+startServer()
 
 // do not exit the process
 setInterval(() => {}, 5000)
