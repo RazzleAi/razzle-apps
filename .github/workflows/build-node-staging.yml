@@ -1,8 +1,8 @@
-name: Publish account manager to docker
+name: Publish Razzle node apps to ECR
 
 on:
   push:
-    branches: [ "releases/account-manager" ]
+    branches: [ "node-apps/staging" ]
 
 env:
   AWS_ACCOUNT: ${{ secrets.AWS_ACCOUNT }}
@@ -52,8 +52,8 @@ jobs:
           IMAGE_TAG: ${{ steps.vars.outputs.sha_short }}
         run: |
           # Build a docker container and push it to ECR
-          npx nx run razzle-account-manager:build-image
-          docker tag razzleai/account-manager $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          make IMAGE_TAG=$IMAGE_TAG build-image
+          docker tag razzleai/razzle-apps-node:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "Pushing image to ECR..."
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
