@@ -45,9 +45,9 @@ jobs:
         run: |
           # Build a docker container and push it to ECR
           make IMAGE_TAG=$IMAGE_TAG build-image
-          docker tag razzleai/razzle-apps-node:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag razzleai/razzle-apps-node:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}-staging
           echo "Pushing image to ECR..."
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}-staging
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:${IMAGE_TAG}-staging"
 
       
