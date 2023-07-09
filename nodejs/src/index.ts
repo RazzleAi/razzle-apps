@@ -46,7 +46,7 @@ function startServer() {
     res.send('OK')
   })
 
-  const port = process.env.PORT || 3000
+  const port = process.env.PORT || 3003
   app.listen(port, () => {
     console.log(`Server running on port ${port}`)
   })
@@ -54,6 +54,7 @@ function startServer() {
 
 startAccountManager()
 startSerpApi()
+// startWidgetTester()
 startServer()
 
 // do not exit the process
