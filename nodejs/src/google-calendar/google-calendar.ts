@@ -14,6 +14,7 @@ import express from 'express'
 
 export class GoogleCalendar {
   private readonly oauthDB = new Map<string, string>()
+  private readonly oauth2Client = this.getGoogleOAuth2Client()
   constructor(private readonly app: express.Application) {
     this.setupOauthRoute()
   }
@@ -33,6 +34,10 @@ export class GoogleCalendar {
             label: 'Click here to authorize Google Calendar',
           },
         }),
+        data: {
+          authUrl: tokenOrAuthUrl.authUrl,
+          message: `Please authorize Google Calendar using ${tokenOrAuthUrl.authUrl}`,
+        },
       })
     }
 
@@ -51,9 +56,8 @@ export class GoogleCalendar {
   }
 
   private getCalendarClient(refreshToken: string): calendar_v3.Calendar {
-    const oauth2Client = this.getGoogleOAuth2Client()
-    oauth2Client.setCredentials({ refresh_token: refreshToken })
-    const calendar = google.calendar({ version: 'v3', auth: oauth2Client })
+    this.oauth2Client.setCredentials({ refresh_token: refreshToken })
+    const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client })
     return calendar
   }
 
@@ -95,8 +99,7 @@ export class GoogleCalendar {
   }
 
   private async getGoogleOAuth2Url(callDetails: CallDetails): Promise<string> {
-    const client = this.getGoogleOAuth2Client()
-    const authUrl = client.generateAuthUrl({
+    const authUrl = this.oauth2Client.generateAuthUrl({
       access_type: 'online',
       scope: [
         'https://www.googleapis.com/auth/calendar',
@@ -111,21 +114,19 @@ export class GoogleCalendar {
   }
 
   private async getGoogleRefreshToken(code: string): Promise<string> {
-    const client = this.getGoogleOAuth2Client()
-    const token = await client.getToken(code)
-    return token.tokens.refresh_token
+    const token = await this.oauth2Client.getToken(code)
+    return token.tokens.access_token
   }
 
   private async getGoogleAccessToken(code: string): Promise<string> {
-    const client = this.getGoogleOAuth2Client()
-    const token = await client.getAccessToken()
+    const token = await this.oauth2Client.getAccessToken()
     return token.token
   }
 
   private async setupOauthRoute() {
     this.app.get('/oauth2callback', async (req, res) => {
       console.debug('oauth2callback', req.query)
-      const state = req.query.state
+      const state = req.query.state as string
       // decode query string to map
       const stateMap = new Map<string, string>()
       state.split('&').forEach((kv) => {
@@ -135,6 +136,8 @@ export class GoogleCalendar {
       const userId = stateMap.get('userId')
       const code = req.query.code
       this.oauthDB.set(userId, code as string)
+      const access_token = await this.getGoogleRefreshToken(code as string)
+      console.debug('access_token', access_token)
       const razzleHost =
         process.env.GOOGLE_CALENDAR_RAZZLE_HOST || 'http://localhost:3001'
       res.setHeader('Content-Type', 'text/html')
