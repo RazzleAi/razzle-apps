@@ -9,11 +9,11 @@ import {
   RazzleResponse,
   RazzleText,
 } from '@razzledotai/sdk'
-import { OAuth2Client } from 'google-auth-library'
+import { OAuth2Client, Credentials } from 'google-auth-library'
 import express from 'express'
 
 export class GoogleCalendar {
-  private readonly oauthDB = new Map<string, string>()
+  private readonly oauthDB = new Map<string, Credentials>()
   private readonly oauth2Client = this.getGoogleOAuth2Client()
   constructor(private readonly app: express.Application) {
     this.setupOauthRoute()
@@ -24,25 +24,25 @@ export class GoogleCalendar {
     description: 'Tests the Google Calendar app',
   })
   async testGoogleCalendar(callDetails: CallDetails) {
-    const tokenOrAuthUrl = await this.getToken(callDetails)
-    if (tokenOrAuthUrl.authUrl) {
+    const credentialsOrAuthUrl = await this.getUserAuth(callDetails)
+
+    if (credentialsOrAuthUrl.authUrl) {
       return new RazzleResponse({
         ui: new RazzleLink({
           action: {
             type: 'URL',
-            action: tokenOrAuthUrl.authUrl,
+            action: credentialsOrAuthUrl.authUrl,
             label: 'Click here to authorize Google Calendar',
           },
         }),
         data: {
-          authUrl: tokenOrAuthUrl.authUrl,
-          message: `Please authorize Google Calendar using ${tokenOrAuthUrl.authUrl}`,
+          authUrl: credentialsOrAuthUrl.authUrl,
+          message: `Please authorize Google Calendar using ${credentialsOrAuthUrl.authUrl}`,
         },
       })
     }
 
-    const { refreshToken } = tokenOrAuthUrl
-    const calendar = this.getCalendarClient(refreshToken)
+    const calendar = this.getCalendarClient(credentialsOrAuthUrl.credentials)
     const calendars = await calendar.calendarList.list()
 
     return new RazzleResponse({
@@ -52,41 +52,34 @@ export class GoogleCalendar {
           text: item.id,
         })),
       }),
+      data: {
+        calendars: calendars.data.items,
+      },
     })
   }
 
-  private getCalendarClient(refreshToken: string): calendar_v3.Calendar {
-    this.oauth2Client.setCredentials({ refresh_token: refreshToken })
+  private getCalendarClient(credentials: Credentials): calendar_v3.Calendar {
+    this.oauth2Client.setCredentials(credentials)
     const calendar = google.calendar({ version: 'v3', auth: this.oauth2Client })
     return calendar
   }
 
-  private async getToken(
+  private async getUserAuth(
     callDetails: CallDetails
-  ): Promise<{ refreshToken?: string; authUrl?: string }> {
+  ): Promise<{ credentials?: Credentials; authUrl?: string }> {
     let token: string | undefined
-    if (this.hasGoogleAuthCode(callDetails)) {
-      token = await this.getGoogleAuthCode(callDetails)
-    }
 
-    if (!token) {
+    if (!this.isUserAuthenticated(callDetails)) {
       return { authUrl: await this.getGoogleOAuth2Url(callDetails) }
     }
 
-    // const refreshToken = await this.getGoogleRefreshToken(token)
-    return { refreshToken: token }
+    const credentials = this.oauthDB.get(callDetails.userId)
+    return { credentials }
   }
 
-  private async hasGoogleAuthCode(callDetails: CallDetails) {
+  private isUserAuthenticated(callDetails: CallDetails) {
     const { userId } = callDetails
     return this.oauthDB.has(userId)
-  }
-
-  private async getGoogleAuthCode(
-    callDetails: CallDetails
-  ): Promise<string | undefined> {
-    const { userId } = callDetails
-    return this.oauthDB.get(userId)
   }
 
   private getGoogleOAuth2Client(): OAuth2Client {
@@ -113,9 +106,9 @@ export class GoogleCalendar {
     return authUrl
   }
 
-  private async getGoogleRefreshToken(code: string): Promise<string> {
+  private async getCredentials(code: string): Promise<Credentials> {
     const token = await this.oauth2Client.getToken(code)
-    return token.tokens.access_token
+    return token.tokens
   }
 
   private async getGoogleAccessToken(code: string): Promise<string> {
@@ -135,9 +128,9 @@ export class GoogleCalendar {
       })
       const userId = stateMap.get('userId')
       const code = req.query.code
-      this.oauthDB.set(userId, code as string)
-      const access_token = await this.getGoogleRefreshToken(code as string)
-      console.debug('access_token', access_token)
+      const credentials = await this.getCredentials(code as string)
+      this.oauthDB.set(userId, credentials)
+      console.debug('oauth2callback', credentials)
       const razzleHost =
         process.env.GOOGLE_CALENDAR_RAZZLE_HOST || 'http://localhost:3001'
       res.setHeader('Content-Type', 'text/html')
