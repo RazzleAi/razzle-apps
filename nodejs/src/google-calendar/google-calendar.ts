@@ -2,6 +2,7 @@ import { calendar, calendar_v3 } from '@googleapis/calendar'
 import { google } from 'googleapis'
 import {
   Action,
+  ActionParam,
   CallDetails,
   RazzleContainer,
   RazzleLink,
@@ -20,26 +21,14 @@ export class GoogleCalendar {
   }
 
   @Action({
-    name: 'testGoogleCalendar',
-    description: 'Tests the Google Calendar app',
+    name: 'listCalendars',
+    description: 'Lists the calendars that a users has on google calendar',
   })
   async testGoogleCalendar(callDetails: CallDetails) {
     const credentialsOrAuthUrl = await this.getUserAuth(callDetails)
 
     if (credentialsOrAuthUrl.authUrl) {
-      return new RazzleResponse({
-        ui: new RazzleLink({
-          action: {
-            type: 'URL',
-            action: credentialsOrAuthUrl.authUrl,
-            label: 'Click here to authorize Google Calendar',
-          },
-        }),
-        data: {
-          authUrl: credentialsOrAuthUrl.authUrl,
-          message: `Please authorize Google Calendar using ${credentialsOrAuthUrl.authUrl}`,
-        },
-      })
+      return this.sendAuthUrlBackToUser(credentialsOrAuthUrl.authUrl)
     }
 
     const calendar = this.getCalendarClient(credentialsOrAuthUrl.credentials)
@@ -55,6 +44,73 @@ export class GoogleCalendar {
       data: {
         calendars: calendars.data.items,
       },
+    })
+  }
+
+  private sendAuthUrlBackToUser(authUrl: string) {
+    return new RazzleResponse({
+      ui: new RazzleLink({
+        action: {
+          type: 'URL',
+          action: authUrl,
+          label: 'Click here to authorize Google Calendar',
+        },
+      }),
+      data: {
+        authUrl: authUrl,
+        message: `Please authorize Google Calendar using ${authUrl}`,
+      },
+    })
+  }
+
+  @Action({
+    name: 'listEvents',
+    description: 'Lists the events on a calendar',
+  })
+  async listEvents(
+    @ActionParam('calendarId') calendarId: string,
+    callDetails: CallDetails
+  ) {
+    const credentialsOrAuthUrl = await this.getUserAuth(callDetails)
+
+    if (credentialsOrAuthUrl.authUrl) {
+      return this.sendAuthUrlBackToUser(credentialsOrAuthUrl.authUrl)
+    }
+
+    const calendar = this.getCalendarClient(credentialsOrAuthUrl.credentials)
+
+    let response
+
+    try {
+      response = await calendar.events.list({
+        calendarId,
+        maxResults: 3,
+      })
+    } catch (error) {
+      console.error(error)
+      return new RazzleResponse({
+        data: {
+          err: error?.errors?.[0]?.message,
+        },
+      })
+    }
+
+    return new RazzleResponse({
+      data: response.data.items,
+      ui: new RazzleList({
+        title: 'Here are the events on your calendar',
+        items: response.data.items.map((item) => ({
+          text: item.summary,
+          actions: [
+            {
+              label: 'View',
+              action: 'viewEvent',
+              type: 'RazzleAction',
+              args: [item.id],
+            },
+          ],
+        })),
+      }),
     })
   }
 
