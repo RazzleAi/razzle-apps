@@ -68,7 +68,21 @@ export class GoogleCalendar {
     description: 'Lists the events on a calendar',
   })
   async listEvents(
-    @ActionParam('calendarId') calendarId: string,
+    @ActionParam({
+      name: 'calendarId',
+      description: 'The id of the calendar to use',
+    })
+    calendarId: string,
+    @ActionParam({
+      name: 'fromDate',
+      description: 'Lower bound (inclusive) for an event\'s start time to filter by',
+    })
+    fromDate: string,
+    @ActionParam({
+      name: 'toDate',
+      description: 'Upper bound (inclusive) for an event\'s start time to filter by',
+    })
+    toDate: string,
     callDetails: CallDetails
   ) {
     const credentialsOrAuthUrl = await this.getUserAuth(callDetails)
@@ -85,6 +99,8 @@ export class GoogleCalendar {
       response = await calendar.events.list({
         calendarId,
         maxResults: 3,
+        timeMin: fromDate,
+        timeMax: toDate,
       })
     } catch (error) {
       console.error(error)

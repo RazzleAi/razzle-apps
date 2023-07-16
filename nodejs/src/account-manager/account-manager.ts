@@ -30,7 +30,7 @@ export class AccountManager {
     description: 'Invite user to an account',
   })
   async inviteUsers(
-    @ActionParam('email') email: string,
+    @ActionParam({name: 'email', description: 'The email of the user to invite'}) email: string,
     callDetails: CallDetails
   ) {
     const accountId = callDetails.accountId
@@ -121,7 +121,7 @@ export class AccountManager {
     stealth: true,
   })
   async removeUserFromAccount(
-    @ActionParam('userId') userId: string,
+    @ActionParam({name: 'userId', description: 'The id of the user to remove'}) userId: string,
     callDetails: CallDetails
   ) {
     const deleted = await removeUser(callDetails.accountId, userId)

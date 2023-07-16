@@ -14,7 +14,10 @@
     "lib": ["es2015"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "paths": {
+      "@razzledotai/sdk": ["../../razzle-server/sdks/razzle-sdk-node/dist"],
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "tmp"]
