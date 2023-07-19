@@ -12,6 +12,7 @@ import {
 } from '@razzledotai/sdk'
 import { OAuth2Client, Credentials } from 'google-auth-library'
 import express from 'express'
+import Datetime, { DateTime } from 'luxon'
 
 export class GoogleCalendar {
   private readonly oauthDB = new Map<string, Credentials>()
@@ -75,12 +76,14 @@ export class GoogleCalendar {
     calendarId: string,
     @ActionParam({
       name: 'fromDate',
-      description: 'Lower bound (inclusive) for an event\'s start time to filter by',
+      description:
+        "Lower bound (inclusive) for an event's start time to filter by",
     })
     fromDate: string,
     @ActionParam({
       name: 'toDate',
-      description: 'Upper bound (inclusive) for an event\'s start time to filter by',
+      description:
+        "Upper bound (inclusive) for an event's start time to filter by",
     })
     toDate: string,
     callDetails: CallDetails
@@ -91,6 +94,9 @@ export class GoogleCalendar {
       return this.sendAuthUrlBackToUser(credentialsOrAuthUrl.authUrl)
     }
 
+    const from = DateTime.fromISO(fromDate).toISO()
+    const to = DateTime.fromISO(toDate).toISO()
+
     const calendar = this.getCalendarClient(credentialsOrAuthUrl.credentials)
 
     let response
@@ -98,9 +104,8 @@ export class GoogleCalendar {
     try {
       response = await calendar.events.list({
         calendarId,
-        maxResults: 3,
-        timeMin: fromDate,
-        timeMax: toDate,
+        timeMin: from,
+        timeMax: to,
       })
     } catch (error) {
       console.error(error)
