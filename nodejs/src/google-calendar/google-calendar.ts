@@ -4,9 +4,15 @@ import {
   Action,
   ActionParam,
   CallDetails,
+  RazzleColumn,
+  RazzleContainer,
+  RazzleCustomList,
+  RazzleCustomListItem,
   RazzleLink,
   RazzleList,
   RazzleResponse,
+  RazzleRow,
+  RazzleText,
 } from '@razzledotai/sdk'
 import { OAuth2Client, Credentials } from 'google-auth-library'
 import express from 'express'
@@ -120,19 +126,45 @@ export class GoogleCalendar {
 
     return new RazzleResponse({
       data: response.data.items,
-      ui: new RazzleList({
+      ui: new RazzleCustomList({
         title: 'Here are the events on your calendar',
-        items: response.data.items.map((item) => ({
-          text: item.summary,
-          actions: [
-            {
-              label: 'View',
-              action: 'viewEvent',
-              type: 'RazzleAction',
-              args: [item.id],
-            },
-          ],
-        })),
+        items: response.data.items
+          .filter((item) => item.status !== 'cancelled')
+          .map((item) => {
+            return new RazzleCustomListItem({               
+              content: new RazzleColumn({                
+                spacing: 2,
+                children: [
+                  new RazzleText({
+                    text: item.summary,
+                    textWeight: 'semibold',
+                  }),
+                  new RazzleRow({
+                    spacing: 5,
+                    mainAxisAlignment: 'start',
+                    children: [
+                      new RazzleLink({
+                        action: {
+                          type: 'URL',
+                          action: item.htmlLink,
+                          label: 'View Event',
+                        },
+                      }),
+                      !!item.location && this.isUrl(item.location)
+                        ? new RazzleLink({
+                            action: {
+                              type: 'URL',
+                              action: item.location,
+                              label: 'Join Meeting',
+                            },
+                          })
+                        : new RazzleContainer(),
+                    ],
+                  }),
+                ],
+              }),
+            })
+          }),
       }),
     })
   }
@@ -157,8 +189,11 @@ export class GoogleCalendar {
 
   private async hasCredentials(callDetails: CallDetails) {
     const { userId } = callDetails
-    const { credentials } = await this.repo.getCredentials(userId)
-    return credentials
+    const credResp = await this.repo.getCredentials(userId)
+    if (!credResp) {
+      return null
+    }
+    return credResp.credentials
   }
 
   private getGoogleOAuth2Client(): OAuth2Client {
@@ -214,5 +249,14 @@ export class GoogleCalendar {
         </html>
         `)
     })
+  }
+
+  private isUrl(str: string) {
+    try {
+      new URL(str)
+      return true
+    } catch (_) {
+      return false
+    }
   }
 }
