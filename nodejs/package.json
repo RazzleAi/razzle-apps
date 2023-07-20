@@ -36,6 +36,7 @@
     "google-auth-library": "^8.9.0",
     "googleapis": "^105.0.0",
     "html-to-text": "^9.0.5",
+    "mongodb": "^5.7.0",
     "natural": "^6.3.0",
     "node-fetch": "^2.6.11",
     "rxjs": "^7.0.0",

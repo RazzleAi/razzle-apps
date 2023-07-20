@@ -1,23 +1,25 @@
-import { calendar, calendar_v3 } from '@googleapis/calendar'
+import { calendar_v3 } from '@googleapis/calendar'
 import { google } from 'googleapis'
 import {
   Action,
   ActionParam,
   CallDetails,
-  RazzleContainer,
   RazzleLink,
   RazzleList,
   RazzleResponse,
-  RazzleText,
 } from '@razzledotai/sdk'
 import { OAuth2Client, Credentials } from 'google-auth-library'
 import express from 'express'
-import Datetime, { DateTime } from 'luxon'
+import { DateTime } from 'luxon'
+import { GCRepo } from './google-calendar.repo'
 
 export class GoogleCalendar {
-  private readonly oauthDB = new Map<string, Credentials>()
   private readonly oauth2Client = this.getGoogleOAuth2Client()
-  constructor(private readonly app: express.Application) {
+
+  constructor(
+    private readonly app: express.Application,
+    private readonly repo: GCRepo
+  ) {
     this.setupOauthRoute()
   }
 
@@ -144,19 +146,19 @@ export class GoogleCalendar {
   private async getUserAuth(
     callDetails: CallDetails
   ): Promise<{ credentials?: Credentials; authUrl?: string }> {
-    let token: string | undefined
+    const credentials = await this.hasCredentials(callDetails)
 
-    if (!this.isUserAuthenticated(callDetails)) {
+    if (!credentials) {
       return { authUrl: await this.getGoogleOAuth2Url(callDetails) }
     }
 
-    const credentials = this.oauthDB.get(callDetails.userId)
     return { credentials }
   }
 
-  private isUserAuthenticated(callDetails: CallDetails) {
+  private async hasCredentials(callDetails: CallDetails) {
     const { userId } = callDetails
-    return this.oauthDB.has(userId)
+    const { credentials } = await this.repo.getCredentials(userId)
+    return credentials
   }
 
   private getGoogleOAuth2Client(): OAuth2Client {
@@ -188,11 +190,6 @@ export class GoogleCalendar {
     return token.tokens
   }
 
-  private async getGoogleAccessToken(code: string): Promise<string> {
-    const token = await this.oauth2Client.getAccessToken()
-    return token.token
-  }
-
   private async setupOauthRoute() {
     this.app.get('/oauth2callback', async (req, res) => {
       console.debug('oauth2callback', req.query)
@@ -206,10 +203,8 @@ export class GoogleCalendar {
       const userId = stateMap.get('userId')
       const code = req.query.code
       const credentials = await this.getCredentials(code as string)
-      this.oauthDB.set(userId, credentials)
       console.debug('oauth2callback', credentials)
-      const razzleHost =
-        process.env.GOOGLE_CALENDAR_RAZZLE_HOST || 'http://localhost:3001'
+      this.repo.saveCredentials(userId, credentials)
       res.setHeader('Content-Type', 'text/html')
       res.send(`
         <html>
