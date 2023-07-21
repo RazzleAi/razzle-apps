@@ -33,7 +33,7 @@ export class GoogleCalendar {
     name: 'listCalendars',
     description: 'Lists the calendars that a users has on google calendar',
   })
-  async testGoogleCalendar(callDetails: CallDetails) {
+  async listCalendars(callDetails: CallDetails) {
     const credentialsOrAuthUrl = await this.getUserAuth(callDetails)
 
     if (credentialsOrAuthUrl.authUrl) {
@@ -207,7 +207,8 @@ export class GoogleCalendar {
 
   private async getGoogleOAuth2Url(callDetails: CallDetails): Promise<string> {
     const authUrl = this.oauth2Client.generateAuthUrl({
-      access_type: 'online',
+      access_type: 'offline',
+      prompt: 'consent',
       scope: [
         'https://www.googleapis.com/auth/calendar',
         'https://www.googleapis.com/auth/calendar.events',
@@ -237,9 +238,10 @@ export class GoogleCalendar {
       })
       const userId = stateMap.get('userId')
       const code = req.query.code
-      const credentials = await this.getCredentials(code as string)
+      const credentials = await this.getCredentials(code as string)      
       console.debug('oauth2callback', credentials)
       this.repo.saveCredentials(userId, credentials)
+
       res.setHeader('Content-Type', 'text/html')
       res.send(`
         <html>
