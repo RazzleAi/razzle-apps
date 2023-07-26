@@ -6,7 +6,7 @@ COPY package*.json ./
 
 RUN npm install -g typescript
 
-RUN npm install --only=production
+RUN npm install --omit=dev
 
 COPY . .
 
