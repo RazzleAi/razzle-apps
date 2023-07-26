@@ -13,18 +13,21 @@ import {
   RazzleResponse,
   RazzleRow,
   RazzleText,
+  WidgetPadding,
 } from '@razzledotai/sdk'
 import { OAuth2Client, Credentials } from 'google-auth-library'
 import express from 'express'
 import { DateTime } from 'luxon'
-import { GCRepo } from './google-calendar.repo'
+import { GCRepo } from './google-calendar-credential.repo'
+import { GCalendarRepo, GCalendar } from './google-calendar.repo'
 
 export class GoogleCalendar {
   private readonly oauth2Client = this.getGoogleOAuth2Client()
 
   constructor(
     private readonly app: express.Application,
-    private readonly repo: GCRepo
+    private readonly repo: GCRepo,
+    private readonly calendarRepo: GCalendarRepo
   ) {
     this.setupOauthRoute()
   }
@@ -34,42 +37,30 @@ export class GoogleCalendar {
     description: 'Lists the calendars that a users has on google calendar',
   })
   async listCalendars(callDetails: CallDetails) {
+    const renderCalendars = (calendars: GCalendar[]): RazzleResponse => {
+      return new RazzleResponse({
+        ui: new RazzleList({
+          title: 'Calendars',
+          items: calendars.map((item) => ({
+            text: item.primary ? `${item.summary} (primary)` : item.summary,
+          })),
+        }),
+        data: {
+          calendars: calendars,
+        },
+      })
+    }
+
+    const dbCalendars = await this.calendarRepo.getCalendars(callDetails.userId)
+    if (dbCalendars && dbCalendars.length > 0) {
+      return renderCalendars(dbCalendars)
+    }
+
     const credentialsOrAuthUrl = await this.getUserAuth(callDetails)
 
     if (credentialsOrAuthUrl.authUrl) {
       return this.sendAuthUrlBackToUser(credentialsOrAuthUrl.authUrl)
     }
-
-    const calendar = this.getCalendarClient(credentialsOrAuthUrl.credentials)
-    const calendars = await calendar.calendarList.list()
-
-    return new RazzleResponse({
-      ui: new RazzleList({
-        title: 'Calendars',
-        items: calendars.data.items.map((item) => ({
-          text: item.id,
-        })),
-      }),
-      data: {
-        calendars: calendars.data.items,
-      },
-    })
-  }
-
-  private sendAuthUrlBackToUser(authUrl: string) {
-    return new RazzleResponse({
-      ui: new RazzleLink({
-        action: {
-          type: 'URL',
-          action: authUrl,
-          label: 'Click here to authorize Google Calendar',
-        },
-      }),
-      data: {
-        authUrl: authUrl,
-        message: `Please authorize Google Calendar using ${authUrl}`,
-      },
-    })
   }
 
   @Action({
@@ -77,11 +68,6 @@ export class GoogleCalendar {
     description: 'Lists the events on a calendar',
   })
   async listEvents(
-    @ActionParam({
-      name: 'calendarId',
-      description: 'The id of the calendar to use',
-    })
-    calendarId: string,
     @ActionParam({
       name: 'fromDate',
       description:
@@ -97,21 +83,32 @@ export class GoogleCalendar {
     callDetails: CallDetails
   ) {
     const credentialsOrAuthUrl = await this.getUserAuth(callDetails)
-
     if (credentialsOrAuthUrl.authUrl) {
       return this.sendAuthUrlBackToUser(credentialsOrAuthUrl.authUrl)
     }
 
+    const primaryCalendar = await this.getPrimaryCalendarFromDB(
+      callDetails.userId
+    )
+    if (!primaryCalendar) {
+      return new RazzleResponse({
+        error: {
+          message: 'No primary calendar found',
+        },
+      })
+    }
+
     const from = DateTime.fromISO(fromDate).toISO()
     const to = DateTime.fromISO(toDate).toISO()
-
-    const calendar = this.getCalendarClient(credentialsOrAuthUrl.credentials)
+    const calendarClient = this.getCalendarClient(
+      credentialsOrAuthUrl.credentials
+    )
 
     let response
 
     try {
-      response = await calendar.events.list({
-        calendarId,
+      response = await calendarClient.events.list({
+        calendarId: primaryCalendar.id,
         timeMin: from,
         timeMax: to,
       })
@@ -131,13 +128,20 @@ export class GoogleCalendar {
         items: response.data.items
           .filter((item) => item.status !== 'cancelled')
           .map((item) => {
-            return new RazzleCustomListItem({               
-              content: new RazzleColumn({                
-                spacing: 2,
+            return new RazzleCustomListItem({
+              content: new RazzleColumn({
+                spacing: 1,
                 children: [
                   new RazzleText({
                     text: item.summary,
                     textWeight: 'semibold',
+                    padding: WidgetPadding.all(0),
+                  }),
+                  new RazzleText({
+                    text: `${DateTime.fromISO(item.start.dateTime).toLocaleString(DateTime.DATETIME_FULL)} - ${DateTime.fromISO(item.end.dateTime).toLocaleString(DateTime.DATETIME_FULL)}`,
+                    textColor: '#aaa',
+                    textSize: 'small',
+                    padding: WidgetPadding.all(0),
                   }),
                   new RazzleRow({
                     spacing: 5,
@@ -167,6 +171,83 @@ export class GoogleCalendar {
           }),
       }),
     })
+  }
+
+  @Action({
+    name: 'createEvent',
+    description: 'Creates an event on a calendar',
+  })
+  async createEvent(
+    @ActionParam({
+      name: 'startTime',
+      description:
+        'The start time of the event',
+    })
+    fromDate: string,
+    @ActionParam({
+      name: 'end',
+      description:
+        'The end time of the event',
+    })
+    toDate: string,
+    callDetails: CallDetails
+  ) {
+    const credentialsOrAuthUrl = await this.getUserAuth(callDetails)
+    if (credentialsOrAuthUrl.authUrl) {
+      return this.sendAuthUrlBackToUser(credentialsOrAuthUrl.authUrl)
+    }
+
+    const primaryCalendar = await this.getPrimaryCalendarFromDB(
+      callDetails.userId
+    )
+    if (!primaryCalendar) {
+      return new RazzleResponse({
+        error: {
+          message: 'No primary calendar found',
+        },
+      })
+    }
+
+    const from = DateTime.fromISO(fromDate).toISO()
+    const to = DateTime.fromISO(toDate).toISO()
+    const calendarClient = this.getCalendarClient(
+      credentialsOrAuthUrl.credentials
+    )
+
+    let response
+    try {
+      response = await calendarClient.events.insert({
+        calendarId: primaryCalendar.id,
+        requestBody: {
+          summary: 'New Event',
+          start: {
+            dateTime: from,            
+          },
+          end: {
+            dateTime: to,
+          }
+        },
+      })
+    } catch (error) {
+      console.error(error)
+      return new RazzleResponse({
+        data: {
+          err: error?.errors?.[0]?.message,
+        },
+      })
+    }
+  }
+
+  private async getPrimaryCalendarFromDB(
+    userId: string
+  ): Promise<GCalendar | null> {
+    const calendars = await this.calendarRepo.getCalendars(userId)
+    const primaryCalendar = calendars.find((item) => item.primary)
+    if (!primaryCalendar) {
+      console.error('No primary calendar found')
+      return null
+    }
+    return primaryCalendar
   }
 
   private getCalendarClient(credentials: Credentials): calendar_v3.Calendar {
@@ -205,6 +286,22 @@ export class GoogleCalendar {
     return oauth2Client
   }
 
+  private sendAuthUrlBackToUser(authUrl: string) {
+    return new RazzleResponse({
+      ui: new RazzleLink({
+        action: {
+          type: 'URL',
+          action: authUrl,
+          label: 'Click here to authorize Google Calendar',
+        },
+      }),
+      data: {
+        authUrl: authUrl,
+        message: `Please authorize Google Calendar using ${authUrl}`,
+      },
+    })
+  }
+
   private async getGoogleOAuth2Url(callDetails: CallDetails): Promise<string> {
     const authUrl = this.oauth2Client.generateAuthUrl({
       access_type: 'offline',
@@ -238,9 +335,9 @@ export class GoogleCalendar {
       })
       const userId = stateMap.get('userId')
       const code = req.query.code
-      const credentials = await this.getCredentials(code as string)      
+      const credentials = await this.getCredentials(code as string)
       console.debug('oauth2callback', credentials)
-      this.repo.saveCredentials(userId, credentials)
+      this.saveCredentialsAndCalendars(userId, credentials)
 
       res.setHeader('Content-Type', 'text/html')
       res.send(`
@@ -251,6 +348,23 @@ export class GoogleCalendar {
         </html>
         `)
     })
+  }
+
+  private async saveCredentialsAndCalendars(
+    userId: string,
+    credentials: Credentials
+  ) {
+    const calendar = this.getCalendarClient(credentials)
+    const calendars = await calendar.calendarList.list()
+    await this.repo.saveCredentials(userId, credentials)
+    const dbCalendars: GCalendar[] = calendars.data.items.map((item) => ({
+      id: item.id,
+      accessRole: item.accessRole,
+      summary: item.summary,
+      selected: item.selected,
+      primary: item.primary,
+    }))
+    await this.calendarRepo.saveCalendars(userId, dbCalendars)
   }
 
   private isUrl(str: string) {

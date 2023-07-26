@@ -1,17 +1,30 @@
 import { Db } from 'mongodb'
 import { Repo } from './repo'
 
-export class GCRepo extends Repo {
+export type GCalendar = {
+  id: string
+  summary: string
+  selected?: boolean
+  accessRole: string
+  primary?: boolean
+}
+
+export class GCalendarRepo extends Repo {
   constructor(db: Db) {
-    super(db, 'google-calendar.access-tokens')
+    super(db, 'google-calendar.calendars')
   }
 
-  async saveCredentials(userId: string, credentials: any) {
-    await this.saveDocument({ userId, credentials })
+  async saveCalendars(userId: string, calendars: GCalendar[]) {
+    await this.saveDocument({ userId, calendars })
   }
 
-  async getCredentials(userId: string): Promise<any> {
-    const document = await this.collection.findOne({ userId })
-    return document
+  async getCalendars(userId: string): Promise<GCalendar[]> {
+    const result = await this.collection.find({ userId })
+    const allCalendars: GCalendar[] = []
+    for await (const doc of result) {
+      allCalendars.push(...doc.calendars)
+    }
+
+    return allCalendars
   }
 }
