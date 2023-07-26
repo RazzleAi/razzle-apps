@@ -74,7 +74,7 @@ function startServer() {
 
 startAccountManager()
 startSerpApi()
-startWidgetTester()
+// startWidgetTester()
 // startGoogleCalendar(app)
 startServer()
 
