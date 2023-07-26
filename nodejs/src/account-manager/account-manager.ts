@@ -30,16 +30,28 @@ export class AccountManager {
     description: 'Invite user to an account',
   })
   async inviteUsers(
-    @ActionParam('email') email: string,
+    @ActionParam({
+      name: 'email',
+      description: 'The email of the user to invite',
+    })
+    email: string,
     callDetails: CallDetails
   ) {
     const accountId = callDetails.accountId
     const userId = callDetails.userId
 
-    await inviteUserToAccount(accountId, userId, email)
-    return new RazzleResponse({
-      ui: new RazzleText({ text: `Invitation sent to ${email}` }),
-    })
+    try {
+      await inviteUserToAccount(accountId, userId, email)
+      return new RazzleResponse({
+        ui: new RazzleText({ text: `Invitation sent to ${email}` }),
+        data: `Invitation sent to ${email}`,
+      })
+    } catch (error) {
+      console.error(error)
+      return new RazzleResponse({
+        ui: new RazzleText({ text: `Failed to send invitation to ${email}` }),
+      })
+    }
   }
 
   @Action({
@@ -112,6 +124,7 @@ export class AccountManager {
             })
         ),
       }),
+      data: memberships,
     })
   }
 
@@ -121,7 +134,11 @@ export class AccountManager {
     stealth: true,
   })
   async removeUserFromAccount(
-    @ActionParam('userId') userId: string,
+    @ActionParam({
+      name: 'userId',
+      description: 'The id of the user to remove',
+    })
+    userId: string,
     callDetails: CallDetails
   ) {
     const deleted = await removeUser(callDetails.accountId, userId)

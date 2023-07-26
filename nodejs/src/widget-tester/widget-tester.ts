@@ -24,7 +24,13 @@ export class WidgetTester {
     name: 'textWidget',
     description: 'Render a text widget',
   })
-  textWidget(@ActionParam('text') text: string) {
+  textWidget(
+    @ActionParam({
+      name: 'text',
+      description: 'The text to render in the text widget',
+    })
+    text: string
+  ) {
     return new RazzleResponse({
       ui: new RazzleText({ text }),
       data: { text },
@@ -36,8 +42,16 @@ export class WidgetTester {
     description: 'Render a text widget with specified padding',
   })
   textWidgetWithPadding(
-    @ActionParam('text') text: string,
-    @ActionParam('padding') padding: number
+    @ActionParam({
+      name: 'text',
+      description: 'The text to render in the text widget',
+    })
+    text: string,
+    @ActionParam({
+      name: 'padding',
+      description: 'The amount of padding to apply to the text widget',
+    })
+    padding: number
   ) {
     return new RazzleResponse({
       ui: new RazzleText({ text, padding: WidgetPadding.all(padding) }),
@@ -48,7 +62,13 @@ export class WidgetTester {
     name: 'imageWidget',
     description: 'Render an image widget with a url',
   })
-  imageWidget(@ActionParam('url') url: string) {
+  imageWidget(
+    @ActionParam({
+      name: 'url',
+      description: 'The url of the image to render in the image widget',
+    })
+    url: string
+  ) {
     return new RazzleResponse({
       ui: new RazzleImage({
         url: 'https://images.nightcafe.studio/jobs/GA6cmQNzC0eUZpbocsuj/GA6cmQNzC0eUZpbocsuj--1--rn9er.jpg?tr=w-1600,c-at_max',
@@ -137,7 +157,13 @@ export class WidgetTester {
     name: 'rowWidget',
     description: 'Render a row widget with spacing',
   })
-  rowWidget(@ActionParam('spacing') spacing: number) {
+  rowWidget(
+    @ActionParam({
+      name: 'spacing',
+      description: 'The amount of spacing to apply to the row widget',
+    })
+    spacing: number
+  ) {
     return new RazzleResponse({
       ui: new RazzleRow({
         spacing: spacing,
@@ -156,7 +182,13 @@ export class WidgetTester {
     name: 'columnWidget',
     description: 'Render a column widget with spacing',
   })
-  columnWidget(@ActionParam('spacing') spacing: number) {
+  columnWidget(
+    @ActionParam({
+      name: 'spacing',
+      description: 'The amount of spacing to apply to the column widget',
+    })
+    spacing: number
+  ) {
     return new RazzleResponse({
       ui: new RazzleColumn({
         spacing: spacing,
@@ -205,7 +237,13 @@ export class WidgetTester {
     name: 'renderContainer',
     description: 'Render a container widget with padding',
   })
-  renderContainer(@ActionParam('padding') padding: number) {
+  renderContainer(
+    @ActionParam({
+      name: 'padding',
+      description: 'The amount of padding to apply to the container widget',
+    })
+    padding: number
+  ) {
     return new RazzleResponse({
       ui: new RazzleContainer({
         padding: WidgetPadding.all(padding),
