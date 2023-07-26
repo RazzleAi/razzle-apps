@@ -6,7 +6,7 @@ COPY package*.json ./
 
 RUN npm install -g typescript
 
-RUN npm install --only=production
+RUN npm install --omit=dev
 
 COPY . .
 
@@ -20,6 +20,7 @@ ENV SERP_API_RAZZLE_AGENT_ID=
 ENV SERP_API_RAZZLE_API_KEY=
 ENV SERP_API_KEY=
 ENV RAZZLE_WS_URL=
+ENV RAZZLE_API_BASE_URL=
 
 EXPOSE 3000
 

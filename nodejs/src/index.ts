@@ -5,6 +5,12 @@ import { SerpAPI } from './serp-api/serp-api'
 import { WidgetTester } from './widget-tester/widget-tester'
 import 'dotenv/config'
 import express, { Request, Response } from 'express'
+import { GoogleCalendar } from './google-calendar/google-calendar'
+import { iniDb } from './common/database'
+import { GCRepo } from './google-calendar/google-calendar-credential.repo'
+import { GCalendarRepo } from './google-calendar/google-calendar.repo'
+
+const app = express()
 
 function startAccountManager() {
   return new Promise((resolve, reject) => {
@@ -40,8 +46,22 @@ function startWidgetTester() {
   })
 }
 
+function startGoogleCalendar(app: express.Application) {
+  const db = iniDb()
+  const gcRepo = new GCRepo(db)
+  const calendarRepo = new GCalendarRepo(db)
+
+  return new Promise((resolve, reject) => {
+    Razzle.app({
+      appId: process.env.GOOGLE_CALENDAR_RAZZLE_AGENT_ID,
+      apiKey: process.env.GOOGLE_CALENDAR_RAZZLE_API_KEY,
+      modules: [{ module: GoogleCalendar, deps: [app, gcRepo, calendarRepo] }],
+    })
+    console.debug('Google Calendar started')
+  })
+}
+
 function startServer() {
-  const app = express()
   app.get('/', (req: Request, res: Response) => {
     res.send('OK')
   })
@@ -53,8 +73,9 @@ function startServer() {
 }
 
 startAccountManager()
-startSerpApi()
+// startSerpApi()
 // startWidgetTester()
+// startGoogleCalendar(app)
 startServer()
 
 // do not exit the process
