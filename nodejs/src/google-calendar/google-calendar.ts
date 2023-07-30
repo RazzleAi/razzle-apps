@@ -61,6 +61,13 @@ export class GoogleCalendar {
     if (credentialsOrAuthUrl.authUrl) {
       return this.sendAuthUrlBackToUser(credentialsOrAuthUrl.authUrl)
     }
+
+    return new RazzleResponse({
+      ui: new RazzleText({ text: 'No calendars found' }),
+      data: {
+        err: 'unknown error occured',
+      },
+    })
   }
 
   @Action({
@@ -122,7 +129,12 @@ export class GoogleCalendar {
     }
 
     return new RazzleResponse({
-      data: response.data.items,
+      data: response.data.items.map((i) => ({
+        organizer: i.organizer,
+        summary: i.summary,
+        start: i.start,
+        end: i.end,
+      })),
       ui: new RazzleCustomList({
         title: 'Here are the events on your calendar',
         items: response.data.items
@@ -138,7 +150,13 @@ export class GoogleCalendar {
                     padding: WidgetPadding.all(0),
                   }),
                   new RazzleText({
-                    text: `${DateTime.fromISO(item.start.dateTime).toLocaleString(DateTime.DATETIME_FULL)} - ${DateTime.fromISO(item.end.dateTime).toLocaleString(DateTime.DATETIME_FULL)}`,
+                    text: `${DateTime.fromISO(
+                      item.start.dateTime
+                    ).toLocaleString(
+                      DateTime.DATETIME_FULL
+                    )} - ${DateTime.fromISO(item.end.dateTime).toLocaleString(
+                      DateTime.DATETIME_FULL
+                    )}`,
                     textColor: '#aaa',
                     textSize: 'small',
                     padding: WidgetPadding.all(0),
@@ -180,14 +198,12 @@ export class GoogleCalendar {
   async createEvent(
     @ActionParam({
       name: 'startTime',
-      description:
-        'The start time of the event',
+      description: 'The start time of the event',
     })
     fromDate: string,
     @ActionParam({
       name: 'end',
-      description:
-        'The end time of the event',
+      description: 'The end time of the event',
     })
     toDate: string,
     callDetails: CallDetails
@@ -221,11 +237,11 @@ export class GoogleCalendar {
         requestBody: {
           summary: 'New Event',
           start: {
-            dateTime: from,            
+            dateTime: from,
           },
           end: {
             dateTime: to,
-          }
+          },
         },
       })
     } catch (error) {

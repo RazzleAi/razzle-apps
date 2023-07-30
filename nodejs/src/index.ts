@@ -72,10 +72,10 @@ function startServer() {
   })
 }
 
-startAccountManager()
+// startAccountManager()
 // startSerpApi()
 // startWidgetTester()
-// startGoogleCalendar(app)
+startGoogleCalendar(app)
 startServer()
 
 // do not exit the process
