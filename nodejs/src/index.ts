@@ -72,7 +72,7 @@ function startServer() {
   })
 }
 
-// startAccountManager()
+startAccountManager()
 // startSerpApi()
 // startWidgetTester()
 startGoogleCalendar(app)
