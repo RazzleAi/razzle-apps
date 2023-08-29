@@ -9,6 +9,7 @@ import { GoogleCalendar } from './google-calendar/google-calendar'
 import { iniDb } from './common/database'
 import { GCRepo } from './google-calendar/google-calendar-credential.repo'
 import { GCalendarRepo } from './google-calendar/google-calendar.repo'
+import { Notion } from './notion/notion'
 
 const app = express()
 
@@ -72,11 +73,23 @@ function startServer() {
   })
 }
 
-startAccountManager()
-// startSerpApi()
-// startWidgetTester()
-startGoogleCalendar(app)
-startServer()
+function startNotion() {
+  return new Promise((resolve, reject) => {
+    Razzle.app({
+      appId: process.env.NOTION_RAZZLE_AGENT_ID,
+      apiKey: process.env.NOTION_RAZZLE_API_KEY,
+      modules: [{ module: Notion, deps: [] }],
+    })
+    console.debug('Notion started')
+  })
+}
+
+// startAccountManager()
+// // startSerpApi()
+// // startWidgetTester()
+// startGoogleCalendar(app)
+// startServer()
+startNotion()
 
 // do not exit the process
 setInterval(() => {}, 5000)
