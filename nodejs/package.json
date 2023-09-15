@@ -5,7 +5,8 @@
   "scripts": {
     "build": "rm -rf dist && npx tsc",
     "postbuild": "cp package*.json dist/ && cd dist && npm i --force --production",
-    "start": "npm run build && node dist/src/index.js"
+    "start": "npm run build && node dist/src/index.js",
+    "start.mediastack": "npm run build && node dist/src/mediastack.js"
   },
   "private": true,
   "devDependencies": {
@@ -30,7 +31,8 @@
     "@nestjs/common": "9.4.2",
     "@nestjs/core": "9.4.2",
     "@nestjs/platform-express": "9.4.2",
-    "@razzledotai/sdk": "file:/Users/olabodeadedoyin/razzle/razzle-server/sdks/razzle-sdk-node/dist",
+    "@notionhq/client": "^2.2.13",
+    "@razzledotai/sdk": "file:../../razzle-server/sdks/razzle-sdk-node/dist",
     "axios": "^1.4.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
