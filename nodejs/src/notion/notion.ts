@@ -1,7 +1,9 @@
 import { Client } from '@notionhq/client'
+import { PageObjectResponse } from '@notionhq/client/build/src/api-endpoints'
 import {
   Action,
   ActionParam,
+  CallDetails,
   RazzleResponse,
   RazzleText,
 } from '@razzledotai/sdk'
@@ -36,7 +38,7 @@ export class Notion {
   }
 
   @Action({
-    name: 'createPpage',
+    name: 'createPage',
     description: 'Create a new page in Notion',
   })
   async createPage(
@@ -49,47 +51,47 @@ export class Notion {
       name: 'content',
       description: 'The content of the page to create',
     })
-    content: string,
-    @ActionParam({
-      name: 'databaseId',
-      description:
-        'The database in which you want the notion page to be created',
-    })
-    dbId: string
+    content: string
   ) {
     try {
-      const page = await this.client.pages.create({
+      const newPage = await this.client.pages.create({
         parent: {
-          database_id: dbId,
-          page_id: dbId,
+          type: 'page_id',
+          page_id: '7e0f4719-4b24-414e-a62e-e5d6422df7b6',
         },
         properties: {
-          Name: {
-            title: [
-              {
-                text: {
-                  content: title,
-                },
+          title: [
+            {
+              text: {
+                content: title,
               },
-            ],
-          },
-          Content: {
-            rich_text: [
-              {
-                text: {
-                  content: content,
-                },
-              },
-            ],
-          },
+            },
+          ],
         },
+        children: [
+          {
+            object: 'block',
+            heading_2: {
+              rich_text: [
+                {
+                  text: {
+                    content,
+                  },
+                },
+              ],
+            },
+          },
+        ],
       })
 
       return new RazzleResponse({
         ui: new RazzleText({
-          text: `Page created with id ${page.id}`,
+          text: `Page created with id ${newPage.id}`,
         }),
-        data: { msg: `Page created with id ${page.id}` },
+        data: {
+          pageId: newPage.id,
+          message: `Page created with id ${newPage.id}`,
+        },
       })
     } catch (e) {
       console.log(e)
@@ -98,6 +100,55 @@ export class Notion {
           text: `Error creating page: ${e}`,
         }),
         data: { msg: `Error creating page: ${e}` },
+      })
+    }
+  }
+
+  @Action({
+    name: 'updatePage',
+    description: 'updates the content of a page',
+  })
+  async updatePage(
+    @ActionParam({
+      name: 'pageId',
+      description: 'The id of the page to update',
+    })
+    pageId: string,
+
+    @ActionParam({
+      name: 'content',
+      description: 'The content of the page to create',
+    })
+    content: string,
+    callDetails: CallDetails
+  ) {
+    try {
+      const page = (await this.client.pages.retrieve({
+        page_id: pageId,
+      })) as PageObjectResponse
+
+      // @ts-ignore
+      const title = page.properties.title.title[0].plain_text
+      await this.client.pages.update({
+        page_id: pageId,
+        archived: true,
+      })
+
+      const response = await this.createPage(title, content)
+
+      return new RazzleResponse({
+        data: {
+          message: 'Page update successfull',
+          id: response.data.pageId,
+        },
+      })
+    } catch (e) {
+      console.log(e)
+      return new RazzleResponse({
+        ui: new RazzleText({
+          text: `Error updating page: ${e}`,
+        }),
+        data: { msg: `Error updating page: ${e}` },
       })
     }
   }
